@@ -1,13 +1,14 @@
 import React from 'react';
-import { ArrowDownTrayIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface ResultCardProps {
   base64: string;
   prompt: string;
   isNew: boolean;
+  onDelete: () => void;
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ base64, prompt, isNew }) => {
+const ResultCard: React.FC<ResultCardProps> = ({ base64, prompt, isNew, onDelete }) => {
   const imageUrl = base64;
 
   const handleDownload = () => {
@@ -46,13 +47,22 @@ const ResultCard: React.FC<ResultCardProps> = ({ base64, prompt, isNew }) => {
                 {prompt}
               </p>
             </div>
-            <button
-              onClick={handleDownload}
-              className="flex items-center justify-center w-10 h-10 bg-cyber-primary/20 border border-cyber-primary text-cyber-primary hover:bg-cyber-primary hover:text-white transition-all rounded-sm"
-              title="保存到本地"
-            >
-              <ArrowDownTrayIcon className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onDelete}
+                className="flex items-center justify-center w-10 h-10 bg-red-900/30 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white transition-all rounded-sm"
+                title="删除图片"
+              >
+                <TrashIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleDownload}
+                className="flex items-center justify-center w-10 h-10 bg-cyber-primary/20 border border-cyber-primary text-cyber-primary hover:bg-cyber-primary hover:text-white transition-all rounded-sm"
+                title="保存到本地"
+              >
+                <ArrowDownTrayIcon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
