@@ -243,7 +243,7 @@ const App: React.FC = () => {
             <div className="flex-grow overflow-y-auto pr-2 space-y-2 custom-scrollbar">
               {history?.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.id!}
                   onClick={() => !loading && setActiveImage(item)}
                   className={`group flex items-center gap-3 p-2 border border-transparent hover:bg-white/5 cursor-pointer transition-all ${activeImage?.id === item.id ? 'bg-white/5 border-l-cyber-primary border-l-2' : ''}`}
                 >
@@ -333,7 +333,7 @@ const App: React.FC = () => {
             <div className="flex gap-2 overflow-x-auto pb-2">
               {history?.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.id!}
                   onClick={() => !loading && setActiveImage(item)}
                   className={`flex-shrink-0 w-16 h-16 border ${activeImage?.id === item.id ? 'border-cyber-secondary' : 'border-gray-800'} overflow-hidden bg-black`}
                 >
