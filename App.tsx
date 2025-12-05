@@ -1,44 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { SparklesIcon, Cog6ToothIcon, ClockIcon, PhotoIcon, CpuChipIcon, BoltIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from './db';
 import AnimatedBackground from './components/AnimatedBackground';
 import ApiKeyModal from './components/ApiKeyModal';
 import ResultCard from './components/ResultCard';
 import { generateImage } from './services/zImageService';
 import { HistoryItem } from './types';
-
-// Load initial history
-const loadHistory = (): HistoryItem[] => {
-  try {
-    const stored = localStorage.getItem('z_image_history');
-    if (!stored) return [];
-
-    const history = JSON.parse(stored) as HistoryItem[];
-
-    // Clean up malformed base64 strings from previous versions
-    const cleanedHistory = history.map(item => {
-      if (item.base64 && typeof item.base64 === 'string' && item.base64.startsWith('data:image/png;base64,data:image/png;base64,')) {
-        return {
-          ...item,
-          base64: item.base64.replace('data:image/png;base64,data:image/png;base64,', 'data:image/png;base64,')
-        };
-      }
-      // Also fix cases where the prefix was missing entirely and added twice in the view
-      if (item.base64 && typeof item.base64 === 'string' && !item.base64.startsWith('data:image/png;base64,')) {
-        return {
-          ...item,
-          base64: `data:image/png;base64,${item.base64}`
-        }
-      }
-      return item;
-    });
-
-    return cleanedHistory;
-  } catch {
-    // If parsing fails, clear the corrupted history
-    localStorage.removeItem('z_image_history');
-    return [];
-  }
-};
 
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('z_image_api_key') || '');
@@ -49,7 +17,12 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
+  // Use live query to get history from IndexedDB, sorted by timestamp descending
+  const history = useLiveQuery(
+    () => db.history.orderBy('timestamp').reverse().toArray(),
+    []
+  );
+
   const [activeImage, setActiveImage] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
@@ -57,10 +30,6 @@ const App: React.FC = () => {
       setKeyModalOpen(true);
     }
   }, [apiKey]);
-
-  useEffect(() => {
-    localStorage.setItem('z_image_history', JSON.stringify(history.slice(0, 20))); // Keep last 20
-  }, [history]);
 
   const handleSaveKey = (key: string) => {
     if (key.trim()) {
@@ -89,15 +58,30 @@ const App: React.FC = () => {
       });
 
       const newItem: HistoryItem = {
-        id: Date.now().toString(),
         prompt: response.prompt,
         base64: response.base64,
         timestamp: Date.now(),
         seed: requestSeed
       };
 
-      setHistory(prev => [newItem, ...prev]);
-      setActiveImage(newItem);
+      // Add to DB and manage history limit
+      await db.transaction('rw', db.history, async () => {
+        // Add the new item
+        const newId = await db.history.add(newItem);
+
+        // Check if history exceeds 20 items
+        const count = await db.history.count();
+        if (count > 20) {
+          // If so, find the oldest item and delete it
+          const oldestItem = await db.history.orderBy('timestamp').first();
+          if (oldestItem?.id) {
+            await db.history.delete(oldestItem.id);
+          }
+        }
+
+        // Set the new item as active
+        setActiveImage({ ...newItem, id: newId });
+      });
     } catch (err: any) {
       setError(err.message || "生成失败，请检查网络或 Key。");
     } finally {
@@ -111,8 +95,8 @@ const App: React.FC = () => {
     setSeed(randomSeed);
   };
 
-  const handleDelete = (id: string) => {
-    setHistory(prev => prev.filter(item => item.id !== id));
+  const handleDelete = async (id: number) => {
+    await db.history.delete(id);
     if (activeImage?.id === id) {
       setActiveImage(null);
     }
@@ -214,8 +198,8 @@ const App: React.FC = () => {
                   onClick={handleGenerate}
                   disabled={loading || !prompt.trim()}
                   className={`w-full py-3 font-display font-bold tracking-widest uppercase transition-all clip-corner relative overflow-hidden group ${loading || !prompt.trim()
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
-                      : 'bg-cyber-primary hover:bg-pink-600 text-white shadow-[0_0_20px_rgba(255,0,128,0.4)]'
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'
+                    : 'bg-cyber-primary hover:bg-pink-600 text-white shadow-[0_0_20px_rgba(255,0,128,0.4)]'
                     }`}
                 >
                   {loading ? (
@@ -257,7 +241,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex-grow overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-              {history.map((item) => (
+              {history?.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => !loading && setActiveImage(item)}
@@ -272,7 +256,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
               ))}
-              {history.length === 0 && (
+              {history?.length === 0 && (
                 <div className="text-center py-10 text-gray-600 text-xs font-mono">
                   NO DATA FOUND
                 </div>
@@ -328,7 +312,7 @@ const App: React.FC = () => {
                 <ResultCard
                   base64={activeImage.base64}
                   prompt={activeImage.prompt}
-                  isNew={!loading && history[0]?.id === activeImage.id}
+                  isNew={!loading && history && history[0]?.id === activeImage.id}
                   onDelete={() => handleDelete(activeImage.id!)}
                 />
               </div>
@@ -347,7 +331,7 @@ const App: React.FC = () => {
           <div className="mt-4 lg:hidden">
             <h3 className="text-xs font-mono text-gray-500 mb-2 uppercase">Recent Cache</h3>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {history.map((item) => (
+              {history?.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => !loading && setActiveImage(item)}

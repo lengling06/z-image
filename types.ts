@@ -22,7 +22,7 @@ export interface ApiError {
 }
 
 export interface HistoryItem {
-  id: string;
+  id?: number; // Changed to optional number for Dexie auto-increment
   prompt: string;
   base64: string;
   timestamp: number;
