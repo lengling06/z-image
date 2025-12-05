@@ -241,21 +241,23 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex-grow overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-              {history?.map((item) => (
-                <div
-                  key={item.id!}
-                  onClick={() => !loading && setActiveImage(item)}
-                  className={`group flex items-center gap-3 p-2 border border-transparent hover:bg-white/5 cursor-pointer transition-all ${activeImage?.id === item.id ? 'bg-white/5 border-l-cyber-primary border-l-2' : ''}`}
-                >
-                  <div className="w-12 h-12 flex-shrink-0 bg-black border border-gray-700 overflow-hidden">
-                    <img src={item.base64} alt="thumb" className="w-full h-full object-cover" />
+              {history
+                ?.filter((item) => item.id !== undefined)
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => !loading && setActiveImage(item)}
+                    className={`group flex items-center gap-3 p-2 border border-transparent hover:bg-white/5 cursor-pointer transition-all ${activeImage?.id === item.id ? 'bg-white/5 border-l-cyber-primary border-l-2' : ''}`}
+                  >
+                    <div className="w-12 h-12 flex-shrink-0 bg-black border border-gray-700 overflow-hidden">
+                      <img src={item.base64} alt="thumb" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <p className="text-xs text-gray-300 truncate font-sans">{item.prompt}</p>
+                      <p className="text-[10px] text-gray-600 font-mono mt-0.5">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs text-gray-300 truncate font-sans">{item.prompt}</p>
-                    <p className="text-[10px] text-gray-600 font-mono mt-0.5">{new Date(item.timestamp).toLocaleTimeString()}</p>
-                  </div>
-                </div>
-              ))}
+                ))}
               {history?.length === 0 && (
                 <div className="text-center py-10 text-gray-600 text-xs font-mono">
                   NO DATA FOUND
@@ -313,7 +315,11 @@ const App: React.FC = () => {
                   base64={activeImage.base64}
                   prompt={activeImage.prompt}
                   isNew={!loading && history && history[0]?.id === activeImage.id}
-                  onDelete={() => handleDelete(activeImage.id!)}
+                  onDelete={() => {
+                    if (activeImage.id !== undefined) {
+                      handleDelete(activeImage.id);
+                    }
+                  }}
                 />
               </div>
             ) : (
@@ -331,15 +337,17 @@ const App: React.FC = () => {
           <div className="mt-4 lg:hidden">
             <h3 className="text-xs font-mono text-gray-500 mb-2 uppercase">Recent Cache</h3>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {history?.map((item) => (
-                <div
-                  key={item.id!}
-                  onClick={() => !loading && setActiveImage(item)}
-                  className={`flex-shrink-0 w-16 h-16 border ${activeImage?.id === item.id ? 'border-cyber-secondary' : 'border-gray-800'} overflow-hidden bg-black`}
-                >
-                  <img src={item.base64} alt="history" className="w-full h-full object-cover" />
-                </div>
-              ))}
+              {history
+                ?.filter((item) => item.id !== undefined)
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => !loading && setActiveImage(item)}
+                    className={`flex-shrink-0 w-16 h-16 border ${activeImage?.id === item.id ? 'border-cyber-secondary' : 'border-gray-800'} overflow-hidden bg-black`}
+                  >
+                    <img src={item.base64} alt="history" className="w-full h-full object-cover" />
+                  </div>
+                ))}
             </div>
           </div>
         </div>
