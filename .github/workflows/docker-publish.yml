@@ -1,0 +1,49 @@
+# GitHub Actions 工作流：构建并发布 Docker 镜像
+
+name: Build and Publish Docker Image
+
+# 触发条件：当代码被推送到 main 分支时
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 虚拟机运行
+
+    permissions:
+      contents: read
+      packages: write # 需要写入 GitHub Packages (Container Registry) 的权限
+
+    steps:
+      # 1. 检出代码
+      # 将您的仓库代码下载到虚拟机中
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 登录到 GitHub Container Registry (ghcr.io)
+      # 使用一个特殊的 GITHUB_TOKEN 来进行身份验证
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }} # 您的 GitHub 用户名
+          password: ${{ secrets.GITHUB_TOKEN }} # 由 GitHub Actions 自动提供的密钥
+
+      # 3. 提取元数据（镜像标签等）
+      # 自动生成镜像的名称和标签，例如 ghcr.io/your-username/your-repo:latest
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+
+      # 4. 构建并推送 Docker 镜像
+      # 使用项目中的 Dockerfile 进行构建，并推送到 ghcr.io
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Dockerfile 所在的上下文路径 (当前目录)
+          push: true # 确认要推送
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
