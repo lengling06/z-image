@@ -1,0 +1,5 @@
+{
+  "name": "Z-Image-Turbo 绘梦终端",
+  "description": "高性能二次元风格文生图生成器，基于 Z-Image-Turbo API。",
+  "requestFramePermissions": []
+}
