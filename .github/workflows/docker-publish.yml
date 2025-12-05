@@ -37,6 +37,11 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          tags: |
+            # 为默认分支（main）生成 'latest' 标签
+            type=raw,value=latest,enable={{is_default_branch}}
+            # 为 commit SHA 生成标签，便于追溯
+            type=sha
 
       # 4. 构建并推送 Docker 镜像
       # 使用项目中的 Dockerfile 进行构建，并推送到 ghcr.io
